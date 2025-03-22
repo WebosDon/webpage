@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat de Demostración de IA</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f4f4f4;
+    }
+    #chat-container {
+      width: 400px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    #chat-box {
+      height: 300px;
+      padding: 10px;
+      overflow-y: auto;
+      border-bottom: 1px solid #ddd;
+    }
+    #user-input {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-top: 1px solid #ddd;
+      outline: none;
+    }
+    .message {
+      margin-bottom: 10px;
+    }
+    .user-message {
+      text-align: right;
+      color: #007bff;
+    }
+    .bot-message {
+      text-align: left;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat-container">
+    <div id="chat-box"></div>
+    <input type="text" id="user-input" placeholder="Escribe tu mensaje..." />
+  </div>
+
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+
+    // Función para enviar el mensaje al webhook de n8n
+    async function sendMessageToWebhook(message) {
+      const webhookUrl = 'https://tudominio.com/webhook-n8n'; // Reemplaza con tu URL de webhook en n8n
+
+      try {
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Error al enviar el mensaje');
+        }
+
+        const data = await response.json();
+        return data.response; // Asume que n8n devuelve un JSON con { response: "Respuesta del bot" }
+      } catch (error) {
+        console.error('Error:', error);
+        return 'Hubo un error al procesar tu mensaje.';
+      }
+    }
+
+    // Función para mostrar mensajes en el chat
+    function displayMessage(message, sender) {
+      const messageElement = document.createElement('div');
+      messageElement.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
+      messageElement.textContent = message;
+      chatBox.appendChild(messageElement);
+      chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll al final
+    }
+
+    // Manejar el envío de mensajes
+    userInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && userInput.value.trim() !== '') {
+        const userMessage = userInput.value.trim();
+        displayMessage(userMessage, 'user');
+        userInput.value = '';
+
+        // Enviar mensaje al webhook y obtener respuesta
+        const botResponse = await sendMessageToWebhook(userMessage);
+        displayMessage(botResponse, 'bot');
+      }
+    });
+  </script>
+</body>
+</html>
