@@ -1,109 +1,320 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat de Demostración de IA</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: #f4f4f4;
-    }
-    #chat-container {
-      width: 400px;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
-    }
-    #chat-box {
-      height: 300px;
-      padding: 10px;
-      overflow-y: auto;
-      border-bottom: 1px solid #ddd;
-    }
-    #user-input {
-      width: 100%;
-      padding: 10px;
-      border: none;
-      border-top: 1px solid #ddd;
-      outline: none;
-    }
-    .message {
-      margin-bottom: 10px;
-    }
-    .user-message {
-      text-align: right;
-      color: #007bff;
-    }
-    .bot-message {
-      text-align: left;
-      color: #333;
-    }
-  </style>
-</head>
-<body>
-  <div id="chat-container">
-    <div id="chat-box"></div>
-    <input type="text" id="user-input" placeholder="Escribe tu mensaje..." />
-  </div>
-
-  <script>
-    const chatBox = document.getElementById('chat-box');
-    const userInput = document.getElementById('user-input');
-
-    // Función para enviar el mensaje al webhook de n8n
-    async function sendMessageToWebhook(message) {
-      const webhookUrl = 'https://tudominio.com/webhook-n8n'; // Reemplaza con tu URL de webhook en n8n
-
-      try {
-        const response = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Error al enviar el mensaje');
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iFundtraders Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom scrollbar */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
         }
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Message animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-animation {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        /* Typing indicator */
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #4b5563;
+            margin: 0 2px;
+        }
+        .typing-indicator span:nth-child(1) {
+            animation: bounce 1s infinite;
+        }
+        .typing-indicator span:nth-child(2) {
+            animation: bounce 1s infinite 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation: bounce 1s infinite 0.4s;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 h-screen flex flex-col">
+    <!-- Header with iFundtraders logo -->
+    <header class="bg-white shadow-sm py-4 px-6 flex items-center justify-center">
+        <div class="flex items-center space-x-2">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                <i class="fas fa-chart-line text-white text-xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">iFundtraders</h1>
+        </div>
+    </header>
 
-        const data = await response.json();
-        return data.response; // Asume que n8n devuelve un JSON con { response: "Respuesta del bot" }
-      } catch (error) {
-        console.error('Error:', error);
-        return 'Hubo un error al procesar tu mensaje.';
-      }
-    }
+    <!-- Chat container -->
+    <div class="flex-1 overflow-hidden flex flex-col max-w-4xl mx-auto w-full px-4">
+        <!-- Messages area -->
+        <div id="chat-messages" class="chat-messages flex-1 overflow-y-auto py-4 space-y-4 px-2">
+            <!-- Welcome message -->
+            <div class="flex items-start space-x-3 message-animation">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <i class="fas fa-robot text-blue-600"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm max-w-[80%]">
+                    <p class="text-gray-800">Hola! soy tu asistente de iFundTraders. Como te puedo ayudar hoy?</p>
+                </div>
+            </div>
+        </div>
 
-    // Función para mostrar mensajes en el chat
-    function displayMessage(message, sender) {
-      const messageElement = document.createElement('div');
-      messageElement.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
-      messageElement.textContent = message;
-      chatBox.appendChild(messageElement);
-      chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll al final
-    }
+        <!-- Typing indicator (hidden by default) -->
+        <div id="typing-indicator" class="hidden mb-2 ml-2">
+            <div class="flex items-center space-x-3">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <i class="fas fa-robot text-blue-600"></i>
+                    </div>
+                </div>
+                <div class="typing-indicator bg-white p-3 rounded-lg shadow-sm">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
 
-    // Manejar el envío de mensajes
-    userInput.addEventListener('keypress', async (e) => {
-      if (e.key === 'Enter' && userInput.value.trim() !== '') {
-        const userMessage = userInput.value.trim();
-        displayMessage(userMessage, 'user');
-        userInput.value = '';
+        <!-- Input area -->
+        <div class="bg-white border-t border-gray-200 py-4 px-4">
+            <form id="chat-form" class="flex space-x-2">
+                <div class="flex-1 relative">
+                    <input 
+                        id="message-input" 
+                        type="text" 
+                        placeholder="Type your message..." 
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        autocomplete="off"
+                    >
+                    <div class="absolute right-2 top-2 flex space-x-1">
+                        <button type="button" id="upload-button" class="p-1 text-gray-500 hover:text-blue-600">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <input type="file" id="file-upload" class="hidden" accept="image/*">
+                    </div>
+                </div>
+                <button 
+                    type="submit" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center"
+                >
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
 
-        // Enviar mensaje al webhook y obtener respuesta
-        const botResponse = await sendMessageToWebhook(userMessage);
-        displayMessage(botResponse, 'bot');
-      }
-    });
-  </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatForm = document.getElementById('chat-form');
+            const messageInput = document.getElementById('message-input');
+            const chatMessages = document.getElementById('chat-messages');
+            const typingIndicator = document.getElementById('typing-indicator');
+            const uploadButton = document.getElementById('upload-button');
+            const fileUpload = document.getElementById('file-upload');
+            
+            // REEMPLAZA ESTA URL con tu webhook real de n8n
+            const WEBHOOK_URL = 'https://n8nworkflow.zapto.org/webhook/b27d11ac-7e5e-499d-b14b-ccc6acacba56';
+            
+            // URL para recibir respuestas (configura esto en tu flujo n8n)
+            //const RESPONSE_ENDPOINT = '/api/chat-response';
+            
+             // Al inicio del script, generamos un nuevo SESSION_ID cada vez
+            const SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);;
+            
+            
+            
+            
+            // Añade un mensaje al chat
+            function addMessage(content, isUser = false, isImage = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `flex items-start space-x-3 message-animation ${isUser ? 'justify-end' : ''}`;
+                
+                if (!isUser) {
+                    messageDiv.innerHTML = `
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <i class="fas fa-robot text-blue-600"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm max-w-[80%]">
+                            ${isImage ? `<img src="${content}" alt="AI response" class="rounded-lg max-w-full h-auto">` : `<p class="text-gray-800">${formatMessage(content)}</p>`}
+                        </div>
+                    `;
+                } else {
+                    messageDiv.innerHTML = `
+                        <div class="bg-blue-600 p-4 rounded-lg shadow-sm max-w-[80%]">
+                            ${isImage ? `<img src="${content}" alt="Your upload" class="rounded-lg max-w-full h-auto">` : `<p class="text-white">${formatMessage(content)}</p>`}
+                        </div>
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                <i class="fas fa-user text-gray-600"></i>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Formatea los mensajes con saltos de línea
+            function formatMessage(message) {
+                return message.replace(/\n/g, '<br>');
+            }
+            
+            // Muestra el indicador de escritura
+            function showTypingIndicator() {
+                typingIndicator.classList.remove('hidden');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Oculta el indicador de escritura
+            function hideTypingIndicator() {
+                typingIndicator.classList.add('hidden');
+            }
+            
+            // Procesa la respuesta del agente IA
+            function processAIResponse(response) {
+                hideTypingIndicator();
+                
+                try {
+                    // Primero intentamos parsear como JSON
+                    const parsedResponse = JSON.parse(response);
+                    
+                    if (parsedResponse.type === 'text') {
+                        addMessage(parsedResponse.content, false, false);
+                    } else if (parsedResponse.type === 'image') {
+                        addMessage(parsedResponse.url, false, true);
+                    } else {
+                        // Respuesta de tipo desconocido
+                        addMessage("Recibí una respuesta en formato desconocido.", false, false);
+                    }
+                } catch (e) {
+                    // Si no es JSON, asumimos que es texto plano
+                    addMessage(response, false, false);
+                }
+            }
+            
+            // Envía mensaje al webhook de n8n
+            async function sendToWebhook(message, fileData = null) {
+                showTypingIndicator();
+                
+                // Preparar los datos a enviar
+                const formData = new FormData();
+                formData.append('message', message);
+                formData.append('sessionId', SESSION_ID);
+                formData.append('timestamp', new Date().toISOString());
+                
+                // Si hay un archivo adjunto, añadirlo
+                if (fileData) {
+                    formData.append('file', fileData);
+                }
+                
+                try {
+                    const response = await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta: ' + response.status);
+                    }
+                    
+                    // Obtener y procesar la respuesta
+                    const responseData = await response.text();
+                    processAIResponse(responseData);
+                    
+                } catch (error) {
+                    hideTypingIndicator();
+                    addMessage("Lo siento, hubo un error procesando tu solicitud. Por favor intenta de nuevo más tarde.", false);
+                    console.error('Error:', error);
+                }
+            }
+            
+            // Manejamos la subida de archivos
+            uploadButton.addEventListener('click', () => {
+                fileUpload.click();
+            });
+            
+            fileUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        // Mostrar la imagen en el chat
+                        addMessage(e.target.result, true, true);
+                        
+                        // Enviar la imagen al webhook
+                        sendToWebhook("", file);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Manejamos el envío del formulario
+            chatForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const message = messageInput.value.trim();
+                
+                if (message) {
+                    addMessage(message, true);
+                    sendToWebhook(message);
+                    messageInput.value = '';
+                }
+            });
+
+            // Mensaje inicial del asistente
+            setTimeout(() => {
+                addMessage("Puedes preguntarme acerca de cualquier problema que tengas o enviarme imágenes para analizar.", false);
+            }, 1000);
+            
+            // Implementación opcional: Long polling para respuestas asíncronas
+            // Esta función podría usarse si tu flujo n8n necesita más tiempo para procesar
+            // y quieres recibir respuestas de manera asíncrona
+            async function pollForResponse() {
+                try {
+                    const response = await fetch(`${RESPONSE_ENDPOINT}?sessionId=${SESSION_ID}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.hasResponse) {
+                            processAIResponse(data.response);
+                        } else {
+                            // Seguir sondeando si no hay respuesta todavía
+                            setTimeout(pollForResponse, 2000);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error al sondear respuestas:', error);
+                }
+            }
+            
+            // Descomentar si implementas polling para respuestas asíncronas
+            // pollForResponse();
+        });
+    </script>
 </body>
 </html>
